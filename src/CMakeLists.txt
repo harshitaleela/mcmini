@@ -24,6 +24,7 @@ set(MC_CPP_FILES
   misc/cond/MCConditionVariableSingleGroupPolicy.cpp
   misc/cond/MCWakeGroup.cpp
 
+  objects/MCBankAccount.cpp
   objects/MCThread.cpp
   objects/MCVisibleObject.cpp
   objects/MCMutex.cpp
@@ -45,6 +46,8 @@ set(MC_CPP_FILES
   transitions/MCTransitionsShared.cpp
   transitions/misc/MCExitTransition.cpp
   transitions/misc/MCAbortTransition.cpp
+  transitions/misc/MCBankAccountDecrement.cpp
+  transitions/misc/MCBankAccountIncrement.cpp
   transitions/misc/MCGlobalVariableRead.cpp
   transitions/misc/MCGlobalVariableWrite.cpp
   transitions/mutex/MCMutexInit.cpp
@@ -72,6 +75,7 @@ set(MC_CPP_FILES
   transitions/rwwlock/MCRWWLockWriter2Enqueue.cpp
   transitions/rwwlock/MCRWWLockWriter2Lock.cpp
   transitions/rwwlock/MCRWWLockUnlock.cpp
+  transitions/wrappers/MCBankAccountWrappers.cpp
   transitions/wrappers/MCBarrierWrappers.cpp
   transitions/wrappers/MCConditionVariableWrappers.cpp
   transitions/wrappers/MCGlobalVariableWrappers.cpp

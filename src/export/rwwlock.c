@@ -24,3 +24,9 @@ pthread_rwwlock_unlock(pthread_rwwlock_t *rwwlock)
 int
 pthread_rwwlock_destroy(pthread_rwwlock_t *rwwlock)
 {}
+void
+pthread_deposit_money(int *bank, int amount)
+{}
+void
+pthread_withdraw_money(int *bank, int amount)
+{}

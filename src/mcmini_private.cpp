@@ -186,6 +186,11 @@ mc_create_global_state_object()
     typeid(MCGlobalVariableRead), &MCReadGlobalRead);
   programState->registerVisibleOperationType(
     typeid(MCGlobalVariableWrite), &MCReadGlobalWrite);
+  programState->registerVisibleOperationType(
+    typeid(MCBankAccountIncrement), &MCReadBankAccountIncrement);
+  programState->registerVisibleOperationType(
+    typeid(MCBankAccountDecrement), &MCReadBankAccountDecrement);
+
   programState->start();
 }
 

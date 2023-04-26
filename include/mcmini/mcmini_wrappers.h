@@ -1,6 +1,7 @@
 #ifndef INCLUDE_MCMINI_MCMINIWRAPPERS_HPP
 #define INCLUDE_MCMINI_MCMINIWRAPPERS_HPP
 
+#include "mcmini/transitions/wrappers/MCBankAccountWrappers.h"
 #include "mcmini/transitions/wrappers/MCBarrierWrappers.h"
 #include "mcmini/transitions/wrappers/MCConditionVariableWrappers.h"
 #include "mcmini/transitions/wrappers/MCGlobalVariableWrappers.h"

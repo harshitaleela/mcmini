@@ -254,4 +254,16 @@ pthread_rwwlock_destroy(pthread_rwwlock_t *rwwlock)
 {
   return mc_pthread_rwwlock_destroy(rwwlock);
 }
+
+void
+pthread_deposit_money(int *bank, int amount)
+{
+  return mc_increment_bank_account(bank, amount);
+}
+
+void
+pthread_withdraw_money(int *bank, int amount)
+{
+  return mc_decrement_bank_account(bank, amount);
+}
 #endif
