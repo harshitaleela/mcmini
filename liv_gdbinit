@@ -1,0 +1,9 @@
+set breakpoint pending on
+set pagination off
+b mcmini_main
+run
+b mc_do_model_checking() 
+b mc_explore_branch() 
+b src/mcmini_private.cpp:597
+b src/MCStack.cpp:129
+cond $bpnum numExecutions ==  this->configuration.maxThreadExecutionDepth 

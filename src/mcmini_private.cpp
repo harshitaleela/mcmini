@@ -33,6 +33,8 @@ pid_t trace_pid                = -1;
 trid_t traceId      = 0;
 trid_t transitionId = 0;
 
+int checking_for_livelock = 0;
+
 time_t mcmini_start_time = 0;
 volatile bool mc_reset = false;
 
@@ -593,6 +595,8 @@ mc_search_dpor_branch_with_thread(const tid_t backtrackThread)
 
   do {
     if (depth >= MAX_TOTAL_TRANSITIONS_IN_PROGRAM) {
+      // check for livelock
+      checking_for_livelock = 1; 
       printResults();
       mcprintf(
         "*** Execution Limit Reached! ***\n\n"
