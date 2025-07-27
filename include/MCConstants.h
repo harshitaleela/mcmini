@@ -10,9 +10,14 @@
   (MAX_TOTAL_THREADS_IN_PROGRAM +          \
    MAX_TOTAL_VISIBLE_OBJECTS_IN_PROGRAM)
 
-#define MAX_TOTAL_TRANSITIONS_IN_PROGRAM (1500)
+#define MAX_TOTAL_TRANSITIONS_IN_PROGRAM (2000)
 #define MAX_TOTAL_STATES_IN_STATE_STACK \
   (MAX_TOTAL_TRANSITIONS_IN_PROGRAM + 1)
+
+#define LLOCK_MAX_PATTERN_SIZE (15)
+#define LLOCK_MAX_SCAN_DEPTH (100)
+#define LLOCK_MIN_SCAN_DEPTH (30)	 //Minimum depth to be scanned to confirm livelock
+#define LLOCK_MIN_PATTERN_REPEATS (3)
 
 typedef uint64_t tid_t;
 typedef uint64_t mutid_t;
@@ -33,6 +38,8 @@ typedef uint64_t trid_t;
 
 #define PTHREAD_SUCCESS (0)
 #define SEM_FLAG_SHARED (1)
+//int checking_for_livelock = 0;
+//#define EFFECTIVE_LIMIT (MAX_TOTAL_TRANSITIONS_IN_PROGRAM + 5)
 
 typedef void *(*thread_routine)(void *);
 typedef void (*free_function)(void *);

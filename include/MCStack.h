@@ -18,11 +18,32 @@ typedef MCTransition *(*MCSharedMemoryHandler)(
 #include "misc/MCSortedStack.hpp"
 #include "misc/MCTypes.hpp"
 #include "objects/MCThread.h"
-
+#include <iostream>
+#include <typeinfo>
+#include <string>
 #include <stack>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+struct traceElement {
+  int tid;
+  std::string operation;
+
+  bool operator == (const traceElement &b) const {
+    return ((tid == b.tid) && (operation==b.operation));
+  }
+
+  bool operator != (const traceElement &b) const {
+     return ((tid != b.tid) || (operation != b.operation));
+   }   
+
+  traceElement &operator = (const traceElement &b) {
+    tid = b.tid;
+    operation = b.operation;
+    return *this;
+  }
+};
 
 
 /**
@@ -546,6 +567,7 @@ public:
   void dynamicallyUpdateBacktrackSets();
 
   bool isInDeadlock() const;
+	bool isInLivelock(const traceElement* trace, int trace_len) const;
   bool hasADataRaceWithNewTransition(const MCTransition &) const;
 
   inline bool
@@ -597,7 +619,9 @@ public:
 
   // TODO: De-couple priting from the state stack + transitions
   void printThreadSchedule() const;
+	void getThreadSchedule(traceElement* trace_arr, int& trace_len) const;
   void printTransitionStack() const;
+	void printRepeatingTransitions(int pattern_len) const;
   void printNextTransitions() const;
 };
 
