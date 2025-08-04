@@ -341,6 +341,12 @@ const MCTransition *MCStack::getFirstEnabledTransition() {
     return &(this->getNextTransitionForThread(nextTraceEntry));
   }
 
+  if (this->transitionStackTop >= this->configuration.maxTotalTransitionsDepthLimit) {
+    // Return nullptr if the total number of transitions executed has reached 
+    // the maximum limit set by user (ENV_MAX_TRANSITIONS_DEPTH_LIMIT)
+    return nullptr;
+  }
+
   const uint32_t numThreads = this->getNumProgramThreads();
   for (uint32_t i = 0; i < numThreads; i++) {
     const MCTransition &nextTransition = this->getNextTransitionForThread(i);
@@ -427,6 +433,73 @@ MCStack::isInDeadlock() const
   }
   return true;
 }
+
+void
+MCStack::increaseMaxTransitionsDepthLimit(int n)
+{
+  this->configuration.maxTotalTransitionsDepthLimit += n;
+}
+
+bool
+MCStack::hasRepetition(const traceElement* trace, int trace_len) const
+{
+  traceElement pattern[LLOCK_MAX_PATTERN_SIZE];
+  int pattern_len = 1;          //Length of pattern to be searched for
+  int nxt_pattern_elt_idx = 0;  //Next transition idx to be matched with
+  int cycle = 0;                //Counts number of pattern repetitions
+  pattern[0] = trace[trace_len - 1];
+
+  for (int i = trace_len - 2; i >= trace_len - LLOCK_MAX_SCAN_DEPTH; i--) {
+    traceElement ele = trace[i];
+    if (ele == pattern[nxt_pattern_elt_idx]) {
+        //if match found, continue exploring for complete match within
+        // current cycle.
+        nxt_pattern_elt_idx++;
+        if (nxt_pattern_elt_idx == pattern_len) {
+            cycle++;                 //complete pattern matched, increment
+            nxt_pattern_elt_idx = 0; //no. of cycles and start with next
+
+            if (cycle > LLOCK_MIN_PATTERN_REPEATS &&
+                i < trace_len - LLOCK_MIN_SCAN_DEPTH) {
+              //successfully found minimum number of cycles, print results
+              this->printRepeatingTransitions(pattern_len);
+              return true;
+            }
+        }
+    }
+    else {
+        int cur_len = pattern_len;
+        int new_len = cur_len * cycle + 1;
+        if (new_len > LLOCK_MAX_PATTERN_SIZE) {
+           return false;
+        }
+        //append any previous full repeats to pattern
+        while (cycle--) {
+          for(int j = 0; j < cur_len; j++) {
+            pattern[pattern_len++] = pattern[j];
+          }
+        }
+        //append any partial matches to the pattern
+        for (int j = 0; j < nxt_pattern_elt_idx &&
+                        pattern_len < LLOCK_MAX_PATTERN_SIZE; j++) {
+            pattern[(pattern_len)++] = pattern[j];
+        }
+        nxt_pattern_elt_idx = 0;
+
+        //add the latest transition to pattern
+        if (pattern_len < LLOCK_MAX_PATTERN_SIZE && ele != pattern[0]) {
+            pattern[pattern_len] = ele;
+            pattern_len++;
+        }
+        else {
+            nxt_pattern_elt_idx++;
+        }
+        cycle = 0;
+    }
+  }
+  return false;
+}
+
 
 bool
 MCStack::hasADataRaceWithNewTransition(
@@ -1025,6 +1098,35 @@ MCStack::printThreadSchedule() const
   mcprintf("\n");
 }
 
+void
+MCStack::printRepeatingTransitions(int pattern_len) const
+{
+  int n = this->transitionStackTop + 1;
+  mcprintf("\nREPEATING THREAD OPERATIONS\n");
+  for (int i = n-pattern_len; i < n; i++)
+  {
+    mcprintf("%s%d. ", (i+1 >= 10 ? "" : " "), i+1);
+    this->getTransitionAtIndex(i).print();
+  }
+  mcprintf("END\n");
+  mcflush();
+} 
+
+void
+MCStack::getThreadSchedule(traceElement* trace_arr, int& trace_len) const
+{ 
+  int i;
+  for (i = 0; i <= this->transitionStackTop; i++) {
+    const MCTransition& transition = this->getTransitionAtIndex(i);
+    int tid = transition.getThreadId();
+
+    // Get type name of the transition's dynamic class:
+    std::string op_code = typeid(transition).name();
+    trace_arr[i] = traceElement{tid, op_code};
+  }
+  trace_len = i;
+}   
+ 
 void
 MCStack::printTransitionStack() const
 {
