@@ -126,7 +126,14 @@ bool MCStack::transitionIsEnabled(const MCTransition &transition) const {
   const unsigned numExecutions = threadData.getExecutionDepth();
   const bool threadNotRestrictedByThreadExecutionDepth =
       numExecutions < this->configuration.maxThreadExecutionDepth;
+	uint64_t maxTotalDepth = MC_STATE_CONFIG_THREAD_NO_LIMIT; 
+  if (getenv(ENV_MAX_TRANSITION_DEPTH)) {
+    maxTotalDepth = strtoul(getenv(ENV_MAX_TRANSITION_DEPTH), nullptr, 10);
+  }
+  const bool threadNotRestrictedByTotalExecutionDepth =
+      this->transitionStackTop < maxTotalDepth;
   return threadNotRestrictedByThreadExecutionDepth &&
+         threadNotRestrictedByTotalExecutionDepth &&
          MCTransition::transitionEnabledInState(this, transition);
 }
 
