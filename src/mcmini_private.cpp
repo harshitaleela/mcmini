@@ -759,7 +759,7 @@ get_config_for_execution_environment()
   // single process that forks, exec()s w/LD_PRELOAD set, and then
   // remotely controls THAT process. We need to discuss this
   uint64_t maxThreadDepth = MC_STATE_CONFIG_THREAD_NO_LIMIT;
-  uint64_t maxTotalDepth = MC_STATE_CONFIG_NO_LIMIT;
+  uint64_t maxTotalDepth = MC_STATE_CONFIG_BRANCH_NO_LIMIT;
   trid_t printBacktraceAtTraceNumber = MC_STATE_CONFIG_PRINT_AT_TRACE;
   bool firstDeadlock                  = false;
   bool expectForwardProgressOfThreads = false;

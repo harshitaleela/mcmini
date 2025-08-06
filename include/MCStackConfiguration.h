@@ -10,7 +10,14 @@
  */
 #define MC_STATE_CONFIG_THREAD_NO_LIMIT (UINT64_MAX)
 #define MC_STATE_CONFIG_PRINT_AT_TRACE  (UINT64_MAX)
-#define MC_STATE_CONFIG_NO_LIMIT        (1500)
+
+/**
+ * A configuration constant which specifies that a branch
+ * may execute as many transitions as they would like (i.e. it
+ * is not limited to an execution depth)
+ */
+#define MC_STATE_CONFIG_BRANCH_NO_LIMIT  (1500)
+
 /**
  * A struct which describes the configurable parameters
  * of the model checking execution
@@ -25,7 +32,7 @@ struct MCStackConfiguration final {
 
   /**
    * The maximum number of transitions that can be run by
-   * all the threads in totsl while running the model checker
+   * all the threads in total while running the model checker
    */
   const uint64_t maxTotalExecutionDepth;
 
