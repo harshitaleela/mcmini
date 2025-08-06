@@ -10,7 +10,7 @@
  */
 #define MC_STATE_CONFIG_THREAD_NO_LIMIT (UINT64_MAX)
 #define MC_STATE_CONFIG_PRINT_AT_TRACE  (UINT64_MAX)
-
+#define MC_STATE_CONFIG_NO_LIMIT        (1500)
 /**
  * A struct which describes the configurable parameters
  * of the model checking execution
@@ -22,6 +22,12 @@ struct MCStackConfiguration final {
    * by any single thread while running the model checker
    */
   const uint64_t maxThreadExecutionDepth;
+
+  /**
+   * The maximum number of transitions that can be run by
+   * all the threads in totsl while running the model checker
+   */
+  const uint64_t maxTotalExecutionDepth;
 
   /**
    * The trace id to stop the model checker at
@@ -43,10 +49,12 @@ struct MCStackConfiguration final {
   const bool expectForwardProgressOfThreads;
 
   MCStackConfiguration(uint64_t maxThreadExecutionDepth,
+                       uint64_t maxTotalExecutionDepth,
                        trid_t printBacktraceAtTraceNumber,
                        bool firstDeadlock,
                        bool expectForwardProgressOfThreads)
     : maxThreadExecutionDepth(maxThreadExecutionDepth),
+      maxTotalExecutionDepth(maxTotalExecutionDepth),
       printBacktraceAtTraceNumber(printBacktraceAtTraceNumber),
       expectForwardProgressOfThreads(expectForwardProgressOfThreads)
   {}
