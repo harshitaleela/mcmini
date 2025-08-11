@@ -126,10 +126,7 @@ bool MCStack::transitionIsEnabled(const MCTransition &transition) const {
   const unsigned numExecutions = threadData.getExecutionDepth();
   const bool threadNotRestrictedByThreadExecutionDepth =
       numExecutions < this->configuration.maxThreadExecutionDepth;
-  const bool threadNotRestrictedByTotalExecutionDepth =
-      this->transitionStackTop < this->configuration.maxTotalExecutionDepth;
   return threadNotRestrictedByThreadExecutionDepth &&
-         threadNotRestrictedByTotalExecutionDepth &&
          MCTransition::transitionEnabledInState(this, transition);
 }
 
@@ -342,6 +339,12 @@ const MCTransition *MCStack::getFirstEnabledTransition() {
     //   It would be better to use ptrs everywhere instead of a
     //   mixture of ptr and reference variable, with little dances to convert.
     return &(this->getNextTransitionForThread(nextTraceEntry));
+  }
+
+  if (this->transitionStackTop >= this->configuration.maxTotalExecutionDepth) {
+    // Return nullptr if the total number of transitions executed has reached 
+    // the maximum limit set by user (ENV_MAX_TRANSITIONS_DEPTH_LIMIT)
+    return nullptr;
   }
 
   const uint32_t numThreads = this->getNumProgramThreads();

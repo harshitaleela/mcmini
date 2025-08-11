@@ -12,9 +12,10 @@
 #define MC_STATE_CONFIG_PRINT_AT_TRACE  (UINT64_MAX)
 
 /**
- * A configuration constant which specifies that a branch
- * may execute as many transitions as they would like (i.e. it
- * is not limited to an execution depth)
+ * A configuration constant which specifies that a branch may
+ * may execute as many transitions as it wants, given that the
+ * total number of transitions in the search tree does not exceed
+ * the default bound set by MAX_TOTAL_TRANSITIONS_IN_PROGRAM
  */
 #define MC_STATE_CONFIG_BRANCH_NO_LIMIT  (1500)
 
