@@ -622,37 +622,19 @@ mc_search_dpor_branch_with_thread(const tid_t backtrackThread)
 	int livelockCheckLimit = MAX_TOTAL_TRANSITIONS_IN_PROGRAM - LLOCK_MAX_SCAN_DEPTH;
 	bool hasLivelock;
   do {
-    	if (depth == livelockCheckLimit)
-			{
-				hasLivelock = mc_explore_branch_for_livelock(depth);
-				if (hasLivelock) {
-					/*mcprintf("\n\n*******************************************************************"
-									 "\nThreads exhibit cyclic behaviour: Livelock\n"
-									 "*******************************************************************\n\n");
-					*/
-        	mcprintf("TraceId %lu, *** LIVELOCK DETECTED ***\n", traceId);
-       	  //programState->printTransitionStack();
-					transitionId = depth;
-        	programState->printNextTransitions();
-					addResult("*** LIVELOCK DETECTED ***\n");
-					printResults();
-        	mc_exit(EXIT_SUCCESS); // Exit McMini
-				}
-			}
-
-			else if (depth >= MAX_TOTAL_TRANSITIONS_IN_PROGRAM){
-      	printResults();
-      	mcprintf(
-        	"*** Execution Limit Reached! ***\n\n"
-        	"McMini ran a trace with %lu transitions.  To increase this limit,\n"
-        	"modify MAX_TOTAL_TRANSITIONS_IN_PROGRAM in MCConstants.h and"
-        	" re-compile.\n"
-        	"But first, try running mcmini with the \"--max-depth-per-thread\""
-        	" flag (\"-m\")\n"
-        	"to limit how far into a trace a McMini thread can go.\n",
-        	depth);
-      	mc_stop_model_checking(EXIT_FAILURE);
-		}
+    if (transitionId >= MAX_TOTAL_TRANSITIONS_IN_PROGRAM) {
+      printResults();
+      mcprintf(
+        "*** Execution Limit Reached! ***\n\n"
+        "McMini ran a trace with %lu transitions.  To increase this limit,\n"
+        "modify MAX_TOTAL_TRANSITIONS_IN_PROGRAM in MCConstants.h and"
+        " re-compile.\n"
+        "But first, try running mcmini with the \"--max-depth-per-thread\""
+        " flag (\"-m\")\n"
+        "to limit how far into a trace a McMini thread can go.\n",
+        depth);
+      mc_stop_model_checking(EXIT_FAILURE);
+    }
 
     depth++;
     transitionId++;
@@ -824,6 +806,7 @@ get_config_for_execution_environment()
   // single process that forks, exec()s w/LD_PRELOAD set, and then
   // remotely controls THAT process. We need to discuss this
   uint64_t maxThreadDepth = MC_STATE_CONFIG_THREAD_NO_LIMIT;
+  uint64_t maxTotalDepth = MC_STATE_CONFIG_BRANCH_NO_LIMIT;
   trid_t printBacktraceAtTraceNumber = MC_STATE_CONFIG_PRINT_AT_TRACE;
   bool firstDeadlock                  = false;
   bool expectForwardProgressOfThreads = false;
@@ -831,6 +814,10 @@ get_config_for_execution_environment()
   // TODO: Sanitize arguments (check errors of strtoul)
   if (getenv(ENV_MAX_DEPTH_PER_THREAD) != NULL) {
     maxThreadDepth = strtoul(getenv(ENV_MAX_DEPTH_PER_THREAD), nullptr, 10);
+  }
+  
+  if (getenv(ENV_MAX_TRANSITIONS_DEPTH_LIMIT) != NULL) {
+    maxTotalDepth = strtoul(getenv(ENV_MAX_TRANSITIONS_DEPTH_LIMIT), nullptr, 10);
   }
 
   if (getenv(ENV_PRINT_AT_TRACE_ID) != NULL) {
@@ -845,7 +832,7 @@ get_config_for_execution_environment()
     firstDeadlock = true;
   }
 
-  return {maxThreadDepth, printBacktraceAtTraceNumber, firstDeadlock,
+  return {maxThreadDepth, maxTotalDepth, printBacktraceAtTraceNumber, firstDeadlock,
           expectForwardProgressOfThreads};
 }
 

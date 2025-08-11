@@ -36,7 +36,21 @@ main(int argc, char *argv[])
 
   // TODO: Use argp.h instead (more options, better descriptions, etc)
   while (cur_arg[0] != NULL && cur_arg[0][0] == '-') {
-    if (strcmp(cur_arg[0], "--max-depth-per-thread") == 0 ||
+    if (strcmp(cur_arg[0], "--max-transitions-depth-limit") == 0 ||
+        strcmp(cur_arg[0], "-M") == 0) {
+      setenv(ENV_MAX_TRANSITIONS_DEPTH_LIMIT, cur_arg[1], 1);
+      char *endptr;
+      if (strtol(cur_arg[1], &endptr, 10) == 0 && endptr[0] != '\0') {
+        fprintf(stderr, "%s: illegal value\n", "--max-transitions-depth-limit");
+        exit(1);
+      }
+      cur_arg += 2;
+    }
+    else if (cur_arg[0][1] == 'M' && isdigit(cur_arg[0][2])) {
+      setenv(ENV_MAX_TRANSITIONS_DEPTH_LIMIT, cur_arg[0] + 2, 1);
+      cur_arg++;
+    }
+    else if (strcmp(cur_arg[0], "--max-depth-per-thread") == 0 ||
         strcmp(cur_arg[0], "-m") == 0) {
       setenv(ENV_MAX_DEPTH_PER_THREAD, cur_arg[1], 1);
       char *endptr;
@@ -111,6 +125,7 @@ main(int argc, char *argv[])
     else if (strcmp(cur_arg[0], "--help") == 0 ||
              strcmp(cur_arg[0], "-h") == 0) {
       fprintf(stderr, "Usage: mcmini [--max-depth-per-thread|-m <num>]\n"
+											"							 [--max-transitions-depth-limit|-M <num>]\n"
                       "              [--first-deadlock|--first|-f]\n"
                       "              [--quiet|-q]\n"
                       "              [--trace|-t <num>|<traceSeq>]\n"
