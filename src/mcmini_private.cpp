@@ -644,7 +644,7 @@ mc_search_dpor_branch_with_thread(const tid_t backtrackThread)
     }
 
     if (typeId == MC_PROGRESS_TRANSITION) {
-      nextTransition = &(programState->getNextTransitionForThread(tid));
+      nextTransition = programState->getNextFairTransition((tid-1));
     }
     else if (exploreRoundRobin) {
       nextTransition = programState->getNextFairTransition(tid);
