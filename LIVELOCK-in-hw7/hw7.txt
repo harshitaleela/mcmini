@@ -1,0 +1,377 @@
+                             Homework 7
+		      DUE: Tuesday, Apr. 16
+
+NOTE:  PART 1 has 6 programs with bugs to diagnose (A through F).
+       Because I was still modifying some of the cases, I will
+       instruct the graders that it is only necessary to diagnose
+       4 of the 6 programs.  The hw7 grade will be split as follows:
+    PART 1:  12.5 points for each bug correctly diagnosed.
+             (Hence, if you get 4 programs right, you will receive
+              50 points for this part.  If you continue, and do all 6,
+              you will receive 75 points.)
+    PART 2:  50 points for correctly writing the revised reader-writer program.
+
+NOTE:  As of Wed. morning, the description of PART 1 (A. producer-consumer)
+       has been re-written.  It no longer depends on using McMini.
+       Please see the writeup.  In addition, the source code for
+       producer-consumer has been modified.  Please download again, if you
+       had downloaded it previously.
+
+There are two parts to this assignment.  You must submit a tar file
+with a Makefile (needed for PART 2), and a text file with your answers
+for PART 1.  For the PART 1 text file, place it in your README, or write
+in the README where your PART 1 text file is.
+As usual, your Makefile must include targets for:
+  clean, build, and check.
+
+In addition to the readings in ostep.org, please note the course directory:
+  /course/cs3650/thread-synch  [or access it through the web]
+for notes on mutex, semaphore, and condition variable.
+In particular, please note:
+  https://course.ccs.neu.edu/cs3650/parent/thread-synch/acquire-release.pdf
+That pdf reviews a commonly used architecture for condition variables.
+This goes beyond what you will not find in ostep.org.
+
+================================
+PART 1:
+
+This assignment is to find bugs and write a brief English paragraph describing
+the bugs in the program and sometimes how to fix them.  You only need
+to submit a single text file with your answers for parts A, B, C, D and E.
+
+As discussed in class, you can use McMini to help you find an
+execution trace with a bug, and then to replay that trace to
+diagnose that bug.  To build McMini, do:
+  tar xvf mcmini-april-2024-v3.tar.gz
+  cd mcmini
+  ./configure
+  make -j 10
+  # -j says to compile the files in parallel.  I limit to at most 10 parallel
+  #     compiles so as not to bring down the operating system (too many forks).
+
+You can then run McMini on a target application.  For example (from the
+'test' subdirectory):
+  gcc -g3 -O0 -o two-threads-and-mutex two-threads-and-mutex.c -pthread
+  # Don't forget the -pthread flag, to link with libpthread.so.
+Now test it with McMini:
+  ./mcmini --first -m 12 ./two-threads-and-mutex
+  # --first says to stop at the first deadlock, if one is found.
+  # -m (--max-depth-per-thread) says to prune a search branch if the next
+  #   thread will have executed more than 12 thread operations (transitions).
+  # If you set it too large, McMini might search forever.  If you set
+  #   it too small, McMini might miss searching a branch that shows deadlock.
+
+Many of the target programs take a flag, '--quiet'.  This is useful when
+McMini searches through many traces:
+  ./mcmini ./a.out --quiet
+Also, be sure to explore './mcmini --help'.  In particular, the
+--max-depth-per-thread says how deeply McMini should explore.
+Make this large enough to exhibit a potential bug, but not so large
+that it will take forever for McMini to explore all the possible
+thread traces (thread schedules).
+
+ADVICE ON USING 'mcmini':
+    You do not need to use McMini.  If you can see the bug simply by
+    reading the source code and executing the code, then
+    just write the cause of the bug.
+        If you do want to use mcmini, I recommend including the
+    flag '--print-at-trace'.  Otherwise, McMini will also print
+    to the screen when any of the traces prints to stdout.
+        REMEMBER:  try a variety of numbers for
+    '-m' ('--max-depth-per-thread').  If it's too small, the execution
+    of each trace will stop before reaching the deadlock.  If it's
+    too large, then McMini might get stuck deeply exploring the
+    first branch (depth-first search), and never get to the later
+    branch that contains the deadlock.
+        REMEMBER:  This McMini is still under development.  It is
+    offered for your assistance, but McMini may still have bugs.
+    For example, it does not always print "DEADLOCK REACHED".
+    But you can look at the final state reported, and decide
+    if that state represents deadlock.
+
+A.  For the first program, it will be easiest for you to simply use
+    the code found in the 'producer-consumer' subdirectory found here.
+    Within that subdirectory, you can 'make'.
+
+    NEW VERSION:
+      This bug appears _only_ when:  NUM_PROD_CONS_THREADS >= 3
+      In this version, I have commented out certain 'sleep'
+        statements, so that your execution will more quickly
+        arrive at the bug.
+      This bug is an example of "livelock".  The threads go
+        into an infinite loop, but they do not make progress.
+        Unfortunately, McMini can diagnose deadlock, but it
+        cannot diagnose livelock.
+      If you want to analyze the end state of this bug using
+        GDB, then:
+        1. cd producer-consumer && make
+        2. You will now see that progress has stopped.
+           Find out the pid of your 'producer-consumer' binary,
+           by doing:  ps uxw
+           Where I write PID, you should write the actual pid
+           of that process.
+           [ If you see two 'producer-consumer' binaries, you
+             can kill the old one with:  kill -9 PID ]
+        3. Now examine the state with GDB:
+             gdb -p PID
+             (gdb) info threads  # The '*' means the current thread.
+             (gdb) thread 2    # We now switch to thread 2.
+             (gdb) where   # Your call frames might be slightly different
+             #0  0x00007f1810e89868 in nanosleep () from /lib64/libc.so.6
+             #1  0x00007f1810e8976e in sleep () from /lib64/libc.so.6
+             #2  0x0000000000400cde in block (sem=0x602100 <sem_consumer>) at partial-solution.c:65
+             #3  0x0000000000400c64 in sem_wait (sem=0x602100 <sem_consumer>) at partial-solution.c:49
+             #4  0x0000000000400b52 in consumer (arg=0x0) at producer-consumer.c:130
+             #5  0x00007f181115d1ca in start_thread () from /lib64/libpthread.so.0
+             #6  0x00007f1810dc9e73 in clone () from /lib64/libc.so.6
+             (gdb) frame 2    # Look at call frame 2
+             (gdb) list    # list the nearby code
+             (gdb) print XXX  # print some of the variables, 'XXX'
+             NOTE:  Instead of 'list', you can type ^Xa (ctrl-X a)
+                    to enter "browsing mode".
+                    Then type ^Xa again, to leave "browsing mode".
+      NOTE:  For hints about the cause of this bug, please read the text
+             at the end of partial-solution.c.  But you only need to
+            _diagnose_ the bug (not fix it).
+
+      What is the cause of this bug?
+
+    OLD VERSION (please ignore):
+     * You will find that you can then execute:
+     *   mcmini -m 30 --print-at-trace ./producer-consumer
+     * to discover an 'assertion' violation.
+     * What is the cause of this bug?
+
+B.  Compile parent-child-tasks.c and test it.
+    To compile:
+      gcc -g3 -O0 -o parent-child-tasks parent-child-tasks.c -pthread
+    If you test it with McMini, remember to use '-m 7 -first' (or some other
+    reasonable max-depth parameter).
+    What is the bug, and why?
+    [ NOTE:  If you use McMini, it will respond:
+             "Trace 0 stopped early!"
+             This means that it stopped due to SEGFAULT, exit with failure,
+               possibly an assert failure, or else something similar.
+               (And a bug in McMini may cause it to select "stopped early"
+                even for a _successful_ exit.)
+             Future McMini's will be more precise. ]
+
+C.  Compile two-threads-and-mutex.c and test it.
+    To compile:
+      gcc -g3 -O0 -o two-threads-and-mutex \
+      two-threads-and-mutex.c -pthread
+    If you test it with McMini, remember to use '-m 7 -first' (or some other
+    reasonable max-depth parameter).
+    What is the bug, and why?
+    What is a simple fix for this bug, by just re-ordering certain lines?
+
+D.  Compile reader-writer.c and test it.
+    To compile:
+      gcc -g3 -O0 -o reader-writer reader-writer.c -pthread
+    You can use McMini.
+    And here, you can find the bug the old way, or with ordinary GDB.
+    Here is a quick way to view the bug inside GDB:
+      # Try ./reader-writer several times on Khoury login if needed,
+      #   until you can see it "hang" and not exit.
+      ./reader-writer &
+      # Now that you can see it hanging (waiting), continue as follows:
+      gdb attach `pgrep --newest reader-writer`
+      (gdb) thread apply all where -4
+    What is the bug, and why?
+    How can you fix the bug by changing the text of a certain line of code?
+    (Note that this line of code occurs in two places, and should be
+     changed in both places.)
+
+E.  Compile barrier.c and test it.
+    What is the bug, and why?
+    [ McMini does not catch this bug, because the bug is one of livelock --
+      not deadlock. ]
+
+F.  [OPTIONAL: You are not required to answer this program 'F'.]
+    Compile barrier-sem.c and test it.
+    What is the bug, and why?
+    [     This version of barrier will sometimes create a deadlock.
+      Run it several times, until you see a deadlock (in which the
+      process hangs).  After that, look at the printout, and try
+      to imagine how this could have happened.
+          We have now fixed the McMini bug affecting this.  If you
+      wish to analyze this deadlock, you can do so using McMini.
+      First, untar and build mcmini-april-2024-v3.tar.gz  (Version 3).
+      I then suggest:
+          gcc -g3 -O0 -o barrier-sem barrier-sem.c
+          mcmini --help
+          mcmini --quiet --first ./barrier-sem
+    ]
+
+================================
+PART 2:
+
+    Write a short program using condition variables.  It should create
+_two_ condition variables:  one for readers and one for writers.
+This means that you will have _two_ "waiting rooms", one for
+a condition variable cond_reader, and one for cond_writer.
+When there are no more _active_ readers, then the the program should
+signal to a single waiting writer.
+When there are no more _active_ writers, then the the program should
+broadcast to _all_ waiting readers, since multiple readers can be
+active at the same time.
+When there are no more _active_ readers, then the program should
+signal to exactly one waiting writer.
+
+Note that you will have to decide where to use pthread_cond_signal
+and pthread_cond_broadcast.  Further, you will need to decide where
+to use cond_reader and where to use cond_writer.
+
+NOTE:  By waking up either one writer or all readers, we have greater
+efficiency.  If there were only one condition variable, then our
+design would be forced to wake up all waiting threads (both readers
+and writers).
+
+    Beyond the above specs, you have a choice of how to handle the
+remaining cases that can arise.  These cases are often referred
+to as reader-preferred and writer-preferred
+1. If there are no more active readers or writers, then you can choose
+    whether you wish to signal/broadcast to readers or to writers.
+2. If there exists one or more active readers and also a waiting writer,
+    and then a new reader enters the acquire section, then you can
+    choose whether to allow the new reader to acquire read permission
+    (a "read lock") or to have it wait until any waiting writers have executed.
+
+NOTE:  Depending on what choices you make, above, you might see
+mostly all reads in succession ("reader-preferred"), or several
+writes in the middle ("writer-preferred").
+
+    Your code should include an "acquire" and a "release" section.
+And within the release section of your code, write two 'assert'
+statements:  both when a thread enters the release section, and when a
+thread exits the release section.  Each of the two assert's should test
+that your invariant is still true.  Since you have two condition variables
+(one for readers and one for writers), you have two possibilities for
+asserting the invariant.  A reader thread should assert the reader
+invariant and a writer thread should assert the writer invariant.
+    [ ** I'm deleting my former comment on conjunction of invariants. ** ]
+    [ ** It's too confusing, and not relevant.                        ** ]
+
+In your main routine, create 5 readers and 2 writers.  All readers and
+writers must be created before you "join" with any of them.
+Each reader should "read" 10 times.  Each writer should "write" twice.
+Before doing the "work" each reader and writer should call:
+  sleep( rand() % 3 );
+to simulate doing the work (after acquiring the read permission
+or write permission (a "write lock", and before releasing releasing
+that permission).  Just after the 'sleep' statement, please add a print
+statement of the form:
+  Reader 5 did task 2.
+  Writer 2 did task 4.
+  etc.
+You can find and copy code for this from the program reader-writer.c
+in this directory.
+
+  [ ** Sorry for my poor writing in the earlier write-up.  A     ** ]
+  [ ** "read permission" is sometimes also called a "read lock". ** ]
+  [ ** But that is ambiguous here, since we also have a          ** ]
+  [ ** "mutex lock".  So, better to call it a "permission".      ** ]
+
+You are not required to use McMini to verify your logic.  If you choose
+to do that, then please be aware that you will want to limit your
+test case to fewer readers/writers (fewer threads), and fewer iterations
+for each thread.  But again, you do not need to use McMini.
+
+McMinni is currently hosted at:  https://github.com/mcminickpt/mcmini
+Also, see this directory for a tarball that you can locally build:
+  mcmini-april-2024-v3.tar.gz
+As per the instructions there, you build it by:
+  ./configure
+  make -j9
+Then:
+  ./mcmini -h
+  ./mcmini APPLICATION
+
+And a reminder:  As stated at the beginning, for Part 2, you must include
+a Makefile with targets for clean, build, and check.
+
+================================
+THE McMini MODEL CHECKER IS PROVIDED TO HELP YOU.
+
+McMini is provided to help you diagnose the bugs.  Like all development
+releases, beware of bugs.  To use it:
+  tar zxvf mcmini-april-2024-v3.tar.gz
+  cd mcmini
+  ./configure && make
+
+TERMINOLOGY:
+  TRACE:
+    A _trace_ is a sequential schedule for the threads.  McMini will
+    explore all traces or schedules up to a certain depth.
+  TRANSITION:
+    A _transition_ is a thread operation.  McMini can continue to execute
+    a single thread, _until_ there is a thread operation.  At the thread
+    operation, McMini should consider continuing the current thread
+    or scheduling a different thread.
+    NOTE:  The non-thread statements before a thread operation cannot affect
+      the behavior of other threads.  So, we don't need to consider scheduling
+      a different thread at a non-thread statement.
+      (Here, we assume that if there is a shared global variable, then
+      it is protected by the thread operations pthread_mutex_lock and
+      pthread_mutex_unlock.  The mutex lock/unlock will force McMini
+      to consider other schedules.)
+
+For a demo, try:
+  make check-gdb
+  (gdb) mcmini help
+
+This demo will use a producer-consumer application based on the standard
+semaphore library provided by glibc in Linux..
+    This provides extended commands to goto a specific execution sequence
+(trace), and to examine each step involving a thread operation (each transition).
+
+To try it with your own application, do:
+  ./mcmini-gdb APPLICATION APPLICATION_ARGS
+  (gdb) mcmini help
+
+When using 'mcmini-gdb', you should be aware of some important flags:
+  --max-depth <NUM>  [limit the depth or number of transitions explored for
+                       each trace;  Try setting --max-depth to a small
+                       number initially, and then raising it.]
+
+Two other option that you may find useful are --verbose and -first.
+
+Note, if you use 'mcmini back', then the thread numbers will be renumbered,
+but the threads will be in the same order.
+
+If you apply 'mcmini-gdb' on your hw7 solution, you will find it necessary
+to first change partial-solution.c and producer-consumer.c, both, to
+change all occurrences of 'sem_' to 'mysem_'.  This is needed so that
+the model checker will realize that it should model-check based on the
+underlying pthread_mutex_lock/unlock functions, and not on sem_wait/post.
+
+Also, if you apply 'mcmini-gdb' to your hw7 solution consider easing
+the burden of work for McMini.  For example, consider creating just
+one consumer thread, and either 2 or 3 producer threads.  McMini can
+then reach any bug much sooner.
+
+And McMini continues to support:
+  info threads, where, finish, next, step, continue
+
+This version of McMini specially calls 'alarm(7200)' to cause it
+to exit after two hours.  This prevents runaway processes on Khoury login.
+
+STRATEGY 1:
+  It is important to use a '<NUM>' in the middle (not too small, not too large).
+  If it is too small, then the trace will not execute enough transitions
+    to reach the bug.
+  If it is too large, then McMini will spend a long time exploring many
+    traces that begin with the same sequence of operations, and may never
+    reach a later sequence of operations that contains the actual bug.
+
+STRATEGY 2:
+  mcmini -m <NUM> ./a.out  # find bad traceId (See STRATEGY 1 for choosing NUM)
+  mcmini-gdb -m <NUM>; (gdb) mcmini gotoTrace NUM+1; (gdb) mcmini forward <NUM2>
+    [ and repeat 'mcmini forward <NUM2>' by binary search to stop just before
+       any segfault. Then use that <NUM2> ]
+    AND:  (gdb) mcmini gotoTrace NUM+1; (gdb) mcmini forward <NUM2>
+          (gdb) finish, next, step, thread #, etc.
+  'mcmini gotoTrace <NUM>
+
+====
+SEE ABOVE for the description of how to submit.
