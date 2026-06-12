@@ -147,6 +147,8 @@ private:
    */
   MCSortedStack irreversibleStatesStack;
 
+  uint64_t livelockTimeElapsed = 0;
+
 private:
 
   /**
@@ -494,6 +496,10 @@ public:
    */
   MCStackItem &getResultantStateForTransitionAtIndex(int) const;
 
+  uint64_t getLivelockTimeElapsed() {
+    return livelockTimeElapsed;
+  }
+
   // MARK: Next "List" (what each thread runs next)
 
   MCTransition &getNextTransitionForThread(tid_t thread) const;
@@ -558,7 +564,7 @@ public:
   void dynamicallyUpdateBacktrackSets();
 
   bool isInDeadlock() const;
-  bool isInLivelock(int);
+  bool isInLivelock(int, trid_t &);
 #ifdef LIVELOCK_EARLY_STOPPING
   bool stateIsRevisited(MCObjectStore &store,
                        int numThreads,
