@@ -8,6 +8,7 @@
 #include <errno.h>    // For errno
 #include <cstring>    // For strerror
 #include <iostream>   // For std::cerr
+#include <chrono>
 
 extern "C" {
 #include "mc_shared_sem.h"
@@ -32,7 +33,9 @@ pid_t trace_pid                = -1;
 trid_t traceId      = 0;
 trid_t transitionId = 0;
 
-time_t mcmini_start_time = 0;
+//time_t mcmini_start_time = 0;
+std::chrono::steady_clock::time_point mcmini_start_time;
+
 volatile bool mc_reset = false;
 
 /**
@@ -67,7 +70,13 @@ static void printResults() {
   mcprintf(resultString);
   mcprintf("Number of traces: %lu\n", traceId);
   mcprintf("Total number of transitions: %lu\n", transitionId);
-  mcprintf("Elapsed time: %lu seconds\n", time(NULL) - mcmini_start_time);
+  //mcprintf("Elapsed time: %lu seconds\n", time(NULL) - mcmini_start_time);
+  auto end =
+  std::chrono::steady_clock::now();
+  auto elapsed =
+    std::chrono::duration_cast<std::chrono::microseconds>(end - mcmini_start_time);
+  mcprintf("Elapsed time: %lld microseconds\n", elapsed.count());
+
   if ((int)traceId < programState->traceIdForPrintBacktrace() &&
       getenv(ENV_FIRST_DEADLOCK) == NULL) { // and no --first-deadlock
     mcprintf("*** NOTE: --trace (-t) requested up to trace %d,\n"
@@ -124,8 +133,9 @@ ucontext_t mcmini_scheduler_main_context;
 MC_CONSTRUCTOR void
 mcmini_main()
 {
-  mcmini_start_time = time(NULL);
-
+  //mcmini_start_time = time(NULL);
+  mcmini_start_time = std::chrono::steady_clock::now();
+  
   getcontext(&mcmini_scheduler_main_context);
 
   if (getenv("MCMINI_PROCESS") == NULL) {
@@ -297,16 +307,31 @@ mc_explore_branch(int curBranchPoint)
   }
   resetTraceSeqArray();
 
-  static time_t last_time_reported = mcmini_start_time;
+  static auto last_time_reported = mcmini_start_time;
   static int interval = 1000;
-  if (traceId == 100 && time(NULL) - last_time_reported > 10) {
+//  if (traceId == 100 && time(NULL) - last_time_reported > 10) {
+  if (traceId == 100 &&
+    std::chrono::duration_cast<std::chrono::seconds>
+    (std::chrono::steady_clock::now()- last_time_reported).count() > 10) {
+
     interval = 100;
   }
-  if (traceId % interval == 0) {
-    if (time(NULL) - last_time_reported > 10) {
-      last_time_reported = time(NULL);
+
+//  if (traceId % interval == 0) {
+//    if (time(NULL) - last_time_reported > 10) {
+//      last_time_reported = time(NULL);
+    if (
+  std::chrono::duration_cast<
+    std::chrono::seconds
+  >(
+    std::chrono::steady_clock::now()
+    - last_time_reported
+  ).count() > 10
+) {
+  last_time_reported =
+    std::chrono::steady_clock::now();
       mcprintf("... %d traces analyzed so far ...\n", traceId);
-    }
+    
   }
   return programState->getDeepestDPORBranchPoint();
 }
@@ -635,7 +660,7 @@ mc_search_dpor_branch_with_thread(const tid_t backtrackThread)
         programState->printNextTransitions();
         addResult("*** DATA RACE DETECTED"
                   " (see pending READ/WRITE operations) ***\n");
-        if (getenv(ENV_FIRST_DEADLOCK)) {
+        if (!getenv(ENV_CONTINUE_AFTER_DATA_RACE)) {
           traceId++;
           printResults();
           mc_exit(EXIT_SUCCESS);
@@ -668,7 +693,7 @@ mc_search_dpor_branch_with_thread(const tid_t backtrackThread)
             strtoul(getenv(ENV_MAX_LIVELOCK_CYCLE_LIMIT), nullptr, 10);
         }
         programState->increaseMaxTransitionsDepthLimit(increasedDepth);
-        hasLivelock = programState->isInLivelock(increasedDepth);
+        hasLivelock = programState->isInLivelock(increasedDepth, transitionId);
         programState->resetMaxTransitionsDepthLimit();
         /*
          * isInLivelock() exits before reaching
@@ -709,6 +734,8 @@ mc_search_dpor_branch_with_thread(const tid_t backtrackThread)
         if (getenv(ENV_FIRST_DEADLOCK) != NULL) {
           traceId++; // Verify "Number of traces" in printResults() is correct.
           printResults();
+          uint64_t livelockElapsedTime = programState->getLivelockTimeElapsed();
+          mcprintf("Livelock detection time: %lu micro-seconds\n", livelockElapsedTime);
           mc_exit(EXIT_SUCCESS); // Exit McMini
         }
       }
